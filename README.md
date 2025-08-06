@@ -82,7 +82,6 @@ chatgpt-clone/
 │   ├── go.mod
 │   ├── go.sum
 │   └── .env
-├── docker-compose.yml          # For MongoDB and other services
 ├── .gitignore
 └── README.md
 ```

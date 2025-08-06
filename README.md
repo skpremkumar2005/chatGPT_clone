@@ -13,6 +13,10 @@ chatgpt-clone/
 │   │   └── favicon.ico
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
+│   │   │   ├── Auth/
+│   │   │   │   ├── Login.jsx
+│   │   │   │   ├── Register.jsx
+│   │   │   │   └── ProtectedRoute.jsx
 │   │   │   ├── Chat/
 │   │   │   │   ├── ChatContainer.jsx
 │   │   │   │   ├── MessageList.jsx

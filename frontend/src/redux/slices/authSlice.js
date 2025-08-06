@@ -2,12 +2,10 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authAPI from '../../services/authAPI';
 
 // --- Thunks ---
-
-// --- FIX: ADD THIS THUNK BACK IN ---
 export const registerUser = createAsyncThunk('auth/register', async (userData, { rejectWithValue }) => {
   try {
     const response = await authAPI.register(userData);
-    return response.data; // Return the success response
+    return response.data;
   } catch (error) {
     return rejectWithValue(error.response ? error.response.data : { message: error.message });
   }
@@ -44,7 +42,10 @@ export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWith
 const initialState = {
   user: null,
   isAuthenticated: false,
-  loading: false, // Set to false initially, true only during async calls
+  // --- THIS IS THE FIX ---
+  // The app is "loading" its authentication status as soon as it starts.
+  loading: true,
+  // --- END OF FIX ---
   error: null,
 };
 
@@ -59,7 +60,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // --- FIX: ADD REDUCERS FOR registerUser ---
+      // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -85,18 +86,18 @@ const authSlice = createSlice({
         state.error = action.payload ? action.payload.message : action.error.message;
         state.isAuthenticated = false;
       })
-      // Load User
+      // Load User (This runs on initial app load)
       .addCase(loadUser.pending, (state) => {
-        state.loading = true;
+        state.loading = true; // It's already true, but this is for clarity
       })
       .addCase(loadUser.fulfilled, (state, action) => {
-        state.loading = false;
-        state.isAuthenticated = true;
+        state.loading = false; // Finished loading
+        state.isAuthenticated = true; // User is valid
         state.user = action.payload.user;
       })
       .addCase(loadUser.rejected, (state) => {
-        state.loading = false;
-        state.isAuthenticated = false;
+        state.loading = false; // Finished loading
+        state.isAuthenticated = false; // User is not valid
         state.user = null;
       })
       // Logout User

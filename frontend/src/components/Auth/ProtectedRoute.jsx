@@ -6,8 +6,9 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  // Show a loading indicator while auth state is being determined
+  // On initial load, `loading` will be true. This block will run.
   if (loading) {
+    // It will wait here until the loadUser API call finishes.
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
         Loading...
@@ -15,12 +16,13 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // After loading is false, this check will run.
   if (!isAuthenticated) {
-    // Redirect them to the /login page, but save the current location they were
-    // trying to go to. This allows us to send them back there after they log in.
+    // If the API call failed, isAuthenticated is false, and it will correctly redirect.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // If loading is false AND isAuthenticated is true, it shows the chat page.
   return children;
 };
 

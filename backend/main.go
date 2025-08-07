@@ -14,48 +14,53 @@ import (
 )
 
 func main() {
-	// Load .env file (only works locally)
+	// Load .env (for local dev)
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Error loading .env file, using environment variables")
+		log.Println("⚠️ .env file not found, using environment variables")
 	}
 
-	// Connect to DB
+	// Connect to database
 	config.ConnectDB()
 
-	// Initialize services
+	// Initialize any services
 	services.Init()
 
 	// Create Echo instance
 	e := echo.New()
 
-	// Register the custom validator
+	// Register custom validator
 	e.Validator = utils.NewValidator()
 
-	// Middleware
+	// CORS Configuration
+	allowedOrigin := os.Getenv("FRONTEND_URL")
+	if allowedOrigin == "" {
+		allowedOrigin = "http://localhost:3000" // fallback for local dev
+	}
+	log.Println("✅ Allowed CORS Origin:", allowedOrigin)
+
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{os.Getenv("FRONTEND_URL")},
+		AllowOrigins:     []string{allowedOrigin},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		AllowMethods:     []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
 		AllowCredentials: true,
 	}))
 
-	// Register routes
+	// Setup all routes
 	routes.SetupRoutes(e)
 
-	// ✅ Add health check route for Render to detect open port
+	// Health check route for Render to detect open port
 	e.GET("/", func(c echo.Context) error {
-		return c.String(200, "Server is running")
+		return c.String(200, "Server is running 🚀")
 	})
 
-	// ✅ Use PORT from environment (Render requires this)
+	// Get PORT from env (Render will set this)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // default for local dev
+		port = "8080"
 	}
-
 	log.Printf("✅ Server starting on port %s", port)
 	e.Logger.Fatal(e.Start(":" + port))
 }

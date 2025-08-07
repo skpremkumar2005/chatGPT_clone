@@ -54,7 +54,9 @@ func Login(c echo.Context) error {
 	cookie.Value = token
 	cookie.Expires = time.Now().Add(72 * time.Hour) // Set expiration
 	cookie.Path = "/"                               // Set the path to the root so it's sent on all requests
-	cookie.HttpOnly = true                          // Crucial for security! Prevents JS access.
+	cookie.HttpOnly = true         
+	cookie.Secure = true                      // ✅ REQUIRED for cross-origin
+    cookie.SameSite = http.SameSiteNoneMode   // ✅ REQUIRED for cross-origin                 // Crucial for security! Prevents JS access.
 	// Set SameSite for CSRF protection. 'Lax' is a good default.
 	// 'Strict' is more secure but can have issues with cross-origin requests.
 	cookie.SameSite = http.SameSiteLaxMode

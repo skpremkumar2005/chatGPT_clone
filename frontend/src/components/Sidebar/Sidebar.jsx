@@ -1,38 +1,36 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout, logoutUser } from '../../redux/slices/authSlice';
+import { logoutUser } from '../../redux/slices/authSlice';
 import { useChat } from '../../hooks/useChat';
 import NewChatButton from './NewChatButton';
 import ChatHistory from './ChatHistory';
 
 const Sidebar = () => {
   const dispatch = useDispatch();
-
-  // Get user data from the auth slice
   const { user } = useSelector((state) => state.auth);
-
-  // Use our custom hook to get chat data and loading status
+  const { sidebarOpen } = useSelector((state) => state.ui); // Get sidebar state
   const { chatHistory, isLoading } = useChat();
 
-  // Define the logout handler
   const handleLogout = () => {
     dispatch(logoutUser());
-    // The App.js routing will automatically redirect to the /login page
   };
 
-  return (
-    <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col border-r border-gray-700">
-      {/* --- New Chat Button --- */}
-      <NewChatButton />
+  // --- THESE CSS CLASSES CONTROL THE RESPONSIVE BEHAVIOR ---
+  const sidebarClasses = `
+    w-64 bg-gray-800 text-white p-4 flex flex-col border-r border-gray-700
+    transform transition-transform duration-300 ease-in-out
+    fixed inset-y-0 left-0 h-full z-30 md:relative md:translate-x-0
+    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+  `;
+  // --- END OF CSS CLASSES ---
 
-      {/* --- Chat History List --- */}
+  return (
+    <aside className={sidebarClasses}>
       <div className="flex-grow overflow-y-auto mb-4">
+        <NewChatButton />
         <ChatHistory history={chatHistory} loading={isLoading} />
       </div>
 
-
-      {/* --- User Profile & Logout Section --- */}
-      {/* This section only shows if a user is logged in */}
       {user && (
         <div className="mt-auto pt-4 border-t border-gray-700">
           <div className="font-semibold truncate" title={user.name}>{user.name}</div>

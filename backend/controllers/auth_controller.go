@@ -59,7 +59,6 @@ func Login(c echo.Context) error {
     cookie.SameSite = http.SameSiteNoneMode   // ✅ REQUIRED for cross-origin                 // Crucial for security! Prevents JS access.
 	// Set SameSite for CSRF protection. 'Lax' is a good default.
 	// 'Strict' is more secure but can have issues with cross-origin requests.
-	cookie.SameSite = http.SameSiteLaxMode
 	// In production, you MUST set Secure to true to ensure the cookie is only sent over HTTPS.
 	// cookie.Secure = true
 	c.SetCookie(cookie)

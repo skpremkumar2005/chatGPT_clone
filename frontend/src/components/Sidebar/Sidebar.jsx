@@ -10,24 +10,33 @@ import {
   Squares2X2Icon,
   PlusIcon,
   ClockIcon,
-  MagnifyingGlassIcon,
-  ChartBarIcon,
-  EllipsisHorizontalIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 
 const Sidebar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const { user, permissions } = useSelector((state) => state.auth);
   const { sidebarOpen } = useSelector((state) => state.ui);
   const { chatHistory, isLoading, createNewChat } = useChat();
   const [showProfile, setShowProfile] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const hasAdminAccess = permissions?.some((p) =>
+    [
+      "manage:companies",
+      "view:users",
+      "view:activity_logs",
+      "view:analytics",
+      "manage:company_settings",
+    ].includes(p),
+  );
+
   const handleLogout = () => {
     dispatch(logoutUser());
+    navigate("/login");
   };
 
   const handleCloseSidebar = () => {
@@ -47,6 +56,16 @@ const Sidebar = () => {
       label: "History",
       action: () => dispatch(toggleSidebar()),
     },
+    // Only show Admin Panel for users with admin permissions
+    ...(hasAdminAccess
+      ? [
+          {
+            icon: ShieldCheckIcon,
+            label: "Admin",
+            action: () => navigate("/admin"),
+          },
+        ]
+      : []),
     // { icon: MagnifyingGlassIcon, label: "Discover", action: () => {} },
     // { icon: ChartBarIcon, label: "Spaces", action: () => {} },
     // { icon: EllipsisHorizontalIcon, label: "More", action: () => {} },

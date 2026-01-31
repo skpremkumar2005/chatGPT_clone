@@ -11,9 +11,10 @@ import (
 )
 
 // CreateNewChat creates a new chat session for a user.
-func CreateNewChat(userID primitive.ObjectID, title string) (*models.Chat, error) {
+func CreateNewChat(userID, companyID primitive.ObjectID, title string) (*models.Chat, error) {
 	newChat := models.Chat{
 		ID:         primitive.NewObjectID(),
+		CompanyID:  companyID,
 		UserID:     userID,
 		Title:      title,
 		CreatedAt:  primitive.NewDateTimeFromTime(time.Now()),
@@ -29,9 +30,13 @@ func CreateNewChat(userID primitive.ObjectID, title string) (*models.Chat, error
 }
 
 // GetUserChats retrieves all non-archived chats for a specific user.
-func GetUserChats(userID primitive.ObjectID) ([]models.Chat, error) {
+func GetUserChats(userID, companyID primitive.ObjectID) ([]models.Chat, error) {
 	var chats []models.Chat
-	filter := bson.M{"user_id": userID, "is_archived": false}
+	filter := bson.M{
+		"user_id":     userID,
+		"company_id":  companyID,
+		"is_archived": false,
+	}
 	opts := options.Find().SetSort(bson.D{{Key: "updated_at", Value: -1}})
 
 	cursor, err := chatCollection.Find(context.Background(), filter, opts)
@@ -81,6 +86,7 @@ func CountMessagesInChat(chatID primitive.ObjectID) (int64, error) {
 	}
 	return count, nil
 }
+
 // --- END OF NEW FUNCTION ---
 
 // SaveMessage saves a new message to the database and updates the parent chat's timestamp.
@@ -101,8 +107,11 @@ func SaveMessage(message *models.Message) (*models.Message, error) {
 }
 
 // UpdateChatTitle updates the title of a specific chat
-func UpdateChatTitle(chatID primitive.ObjectID, title string) error {
-	filter := bson.M{"_id": chatID}
+func UpdateChatTitle(chatID, companyID primitive.ObjectID, title string) error {
+	filter := bson.M{
+		"_id":        chatID,
+		"company_id": companyID,
+	}
 	update := bson.M{"$set": bson.M{"title": title, "updated_at": primitive.NewDateTimeFromTime(time.Now())}}
 
 	_, err := chatCollection.UpdateOne(context.Background(), filter, update)
@@ -110,9 +119,12 @@ func UpdateChatTitle(chatID primitive.ObjectID, title string) error {
 }
 
 // GetChatByID retrieves a specific chat by its ID
-func GetChatByID(chatID primitive.ObjectID) (*models.Chat, error) {
+func GetChatByID(chatID, companyID primitive.ObjectID) (*models.Chat, error) {
 	var chat models.Chat
-	filter := bson.M{"_id": chatID}
+	filter := bson.M{
+		"_id":        chatID,
+		"company_id": companyID,
+	}
 
 	err := chatCollection.FindOne(context.Background(), filter).Decode(&chat)
 	if err != nil {
@@ -140,13 +152,18 @@ func CleanupEmptyChat(chatID primitive.ObjectID) error {
 }
 
 // DeleteChat permanently deletes a chat and all its messages from the database
-func DeleteChat(chatID primitive.ObjectID) error {
+func DeleteChat(chatID, companyID primitive.ObjectID) error {
+	// Delete all messages first
 	_, err := messageCollection.DeleteMany(context.Background(), bson.M{"chat_id": chatID})
 	if err != nil {
 		return err
 	}
 
-	_, err = chatCollection.DeleteOne(context.Background(), bson.M{"_id": chatID})
+	// Delete the chat with company_id verification
+	_, err = chatCollection.DeleteOne(context.Background(), bson.M{
+		"_id":        chatID,
+		"company_id": companyID,
+	})
 	if err != nil {
 		return err
 	}

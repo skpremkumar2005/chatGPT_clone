@@ -33,6 +33,7 @@ type UpdateChatInput struct {
 // CreateChat creates a new chat session.
 func CreateChat(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 
 	var input CreateChatInput
 	if err := c.Bind(&input); err != nil {
@@ -44,7 +45,7 @@ func CreateChat(c echo.Context) error {
 		title = "New Chat" // A clean default title
 	}
 
-	chat, err := services.CreateNewChat(userID, title)
+	chat, err := services.CreateNewChat(userID, companyID, title)
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create chat")
 	}
@@ -55,8 +56,9 @@ func CreateChat(c echo.Context) error {
 // GetChats retrieves all of a user's non-archived chats.
 func GetChats(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 
-	chats, err := services.GetUserChats(userID)
+	chats, err := services.GetUserChats(userID, companyID)
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch chats")
 	}
@@ -68,6 +70,7 @@ func GetChats(c echo.Context) error {
 // It also handles setting the chat title from the first message.
 func CreateMessage(c echo.Context) error {
 	startTime := time.Now() // Track response time
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
@@ -104,7 +107,7 @@ func CreateMessage(c echo.Context) error {
 			title = string([]rune(title)[:maxTitleLength])
 		}
 
-		err := services.UpdateChatTitle(chatID, title)
+		err := services.UpdateChatTitle(chatID, companyID, title)
 		if err != nil {
 			c.Logger().Error("Failed to auto-update chat title:", err)
 			// Log the error but continue.
@@ -193,12 +196,13 @@ func GetMessages(c echo.Context) error {
 // GetChatByID retrieves a specific chat by its ID after verifying ownership.
 func GetChatByID(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid chat ID")
 	}
 
-	chat, err := services.GetChatByID(chatID)
+	chat, err := services.GetChatByID(chatID, companyID)
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusNotFound, "Chat not found")
 	}
@@ -213,6 +217,7 @@ func GetChatByID(c echo.Context) error {
 // UpdateChat handles manually renaming a chat.
 func UpdateChat(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid chat ID")
@@ -227,7 +232,7 @@ func UpdateChat(c echo.Context) error {
 	}
 
 	// Security check: Verify the chat belongs to the current user before updating.
-	chat, err := services.GetChatByID(chatID)
+	chat, err := services.GetChatByID(chatID, companyID)
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusNotFound, "Chat not found")
 	}
@@ -235,7 +240,7 @@ func UpdateChat(c echo.Context) error {
 		return utils.ErrorResponse(c, http.StatusForbidden, "Unauthorized to update this chat")
 	}
 
-	if err := services.UpdateChatTitle(chatID, input.Title); err != nil {
+	if err := services.UpdateChatTitle(chatID, companyID, input.Title); err != nil {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update chat title")
 	}
 
@@ -245,13 +250,14 @@ func UpdateChat(c echo.Context) error {
 // DeleteChat handles manually deleting a chat.
 func DeleteChat(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid chat ID")
 	}
 
 	// Security check: Verify the chat belongs to the current user before deleting.
-	chat, err := services.GetChatByID(chatID)
+	chat, err := services.GetChatByID(chatID, companyID)
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusNotFound, "Chat not found")
 	}
@@ -259,7 +265,7 @@ func DeleteChat(c echo.Context) error {
 		return utils.ErrorResponse(c, http.StatusForbidden, "Unauthorized to delete this chat")
 	}
 
-	if err := services.DeleteChat(chatID); err != nil {
+	if err := services.DeleteChat(chatID, companyID); err != nil {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete chat")
 	}
 
@@ -269,13 +275,14 @@ func DeleteChat(c echo.Context) error {
 // CleanupChat handles the request to check and potentially delete an empty chat.
 func CleanupChat(c echo.Context) error {
 	userID := c.Request().Context().Value(middleware.UserIDKey).(primitive.ObjectID)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid chat ID")
 	}
 
 	// Security check: Verify ownership before cleaning up.
-	chat, err := services.GetChatByID(chatID)
+	chat, err := services.GetChatByID(chatID, companyID)
 	if err != nil {
 		// If chat not found, it might have already been deleted, which is fine.
 		return utils.SuccessResponse(c, "Chat not found, assumed cleaned up", nil)

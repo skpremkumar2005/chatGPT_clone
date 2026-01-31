@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, memo } from "react";
 import Message from "./Message";
 
-const MessageList = ({ messages, isTyping }) => {
+const MessageList = memo(({ messages, isTyping }) => {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -52,6 +52,8 @@ const MessageList = ({ messages, isTyping }) => {
       <div ref={messagesEndRef} />
     </div>
   );
-};
+});
+
+MessageList.displayName = "MessageList";
 
 export default MessageList;

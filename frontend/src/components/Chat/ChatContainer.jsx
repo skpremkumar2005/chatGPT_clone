@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useChat } from "../../hooks/useChat";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
@@ -11,12 +11,10 @@ const ChatContainer = () => {
 
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
-  const handleDocumentProcessed = (data) => {
-    // Refresh messages or handle the processed document
+  const handleDocumentProcessed = useCallback((data) => {
+    // Close upload UI - messages will be updated via Redux
     setShowDocumentUpload(false);
-    // The backend automatically adds messages, so we just close the upload UI
-    window.location.reload(); // Simple refresh - can be optimized
-  };
+  }, []);
 
   if (!activeChatId) {
     return <WelcomeScreen />;

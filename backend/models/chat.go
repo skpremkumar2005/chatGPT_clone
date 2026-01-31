@@ -4,6 +4,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type Chat struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	CompanyID  primitive.ObjectID `bson:"company_id" json:"company_id"` // Tenant isolation
 	UserID     primitive.ObjectID `bson:"user_id" json:"user_id"`
 	Title      string             `bson:"title" json:"title"`
 	CreatedAt  primitive.DateTime `bson:"created_at" json:"created_at"`

@@ -11,25 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Register handles new user registration.
+// Register is deprecated in multi-tenant system
+// Users should be created by company admins via /api/admin/users
+// or during company registration via /api/companies/register
 func Register(c echo.Context) error {
-	var input services.RegisterUserInput
-	if err := c.Bind(&input); err != nil {
-		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body")
-	}
-	if err := c.Validate(&input); err != nil {
-		return utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	user, err := services.RegisterNewUser(input)
-	if err != nil {
-		return utils.ErrorResponse(c, http.StatusConflict, err.Error())
-	}
-
-	// Do not return password in the response
-	user.Password = ""
-
-	return utils.SuccessResponse(c, "User registered successfully", user)
+	return utils.ErrorResponse(c, http.StatusForbidden,
+		"Public registration is not allowed. Please contact your company administrator to create an account, or register your company at /api/companies/register")
 }
 
 // Login handles user login and returns a JWT.
@@ -42,30 +29,30 @@ func Login(c echo.Context) error {
 		return utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	token, err := services.LoginUser(input)
+	// Use multi-tenant login
+	token, user, err := services.MultiTenantLoginUser(input, c.RealIP())
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusUnauthorized, err.Error())
 	}
 
-	// --- CHANGE IS HERE ---
 	// Set the token in a secure, HttpOnly cookie
 	cookie := new(http.Cookie)
-	cookie.Name = "token" // The name of the cookie
+	cookie.Name = "token"
 	cookie.Value = token
-	cookie.Expires = time.Now().Add(72 * time.Hour) // Set expiration
-	cookie.Path = "/"                               // Set the path to the root so it's sent on all requests
-	cookie.HttpOnly = true         
-	cookie.Secure = true                      // ✅ REQUIRED for cross-origin
-    cookie.SameSite = http.SameSiteNoneMode   // ✅ REQUIRED for cross-origin                 // Crucial for security! Prevents JS access.
-	// Set SameSite for CSRF protection. 'Lax' is a good default.
-	// 'Strict' is more secure but can have issues with cross-origin requests.
-	// In production, you MUST set Secure to true to ensure the cookie is only sent over HTTPS.
-	// cookie.Secure = true
+	cookie.Expires = time.Now().Add(72 * time.Hour)
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	cookie.Secure = true
+	cookie.SameSite = http.SameSiteNoneMode
 	c.SetCookie(cookie)
-	// --- END OF CHANGE ---
 
-	// Return a success message instead of the token
-	return utils.SuccessResponse(c, "Login successful", nil)
+	// Return user info without password
+	user.Password = ""
+	return utils.SuccessResponse(c, "Login successful", map[string]interface{}{
+		"user":    user,
+		"company": user.CompanyID.Hex(),
+		"role":    user.RoleName,
+	})
 }
 
 // GetCurrentUser retrieves the profile of the currently authenticated user.

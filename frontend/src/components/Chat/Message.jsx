@@ -1,7 +1,7 @@
-import React from "react";
+import React, { memo } from "react";
 import { formatTimestamp } from "../../utils/helpers";
 
-const Message = ({ message }) => {
+const Message = memo(({ message }) => {
   const isUser = message.role === "user";
 
   return (
@@ -35,6 +35,8 @@ const Message = ({ message }) => {
       </div>
     </div>
   );
-};
+});
+
+Message.displayName = "Message";
 
 export default Message;

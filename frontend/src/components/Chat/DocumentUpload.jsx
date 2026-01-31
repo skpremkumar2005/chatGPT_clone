@@ -60,7 +60,9 @@ const DocumentUpload = ({ chatId, onDocumentProcessed, onCancel }) => {
       }
     } catch (error) {
       console.error("Document upload failed:", error);
-      const errorMsg = error.response?.data?.message || "Failed to process document. Please try again.";
+      const errorMsg =
+        error.response?.data?.message ||
+        "Failed to process document. Please try again.";
       alert(errorMsg);
     } finally {
       setIsUploading(false);

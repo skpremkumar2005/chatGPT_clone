@@ -1,20 +1,37 @@
-import React from 'react';
-import { UserIcon, SparklesIcon } from '@heroicons/react/24/solid';
-import { formatTimestamp } from '../../utils/helpers'; // Import the helper
+import React from "react";
+import { formatTimestamp } from "../../utils/helpers";
 
 const Message = ({ message }) => {
-  const isUser = message.role === 'user';
+  const isUser = message.role === "user";
 
   return (
-    <div className={`flex items-start p-4 ${isUser ? 'bg-gray-800' : 'bg-gray-700'}`}>
-      <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-500' : 'bg-green-500'}`}>
-        {isUser ? <UserIcon className="h-5 w-5 text-white" /> : <SparklesIcon className="h-5 w-5 text-white" />}
-      </div>
-      <div className="ml-4 w-full">
-        <p className="whitespace-pre-wrap">{message.content}</p>
-        <span className="text-xs text-gray-500 mt-1 block">
-          {formatTimestamp(message.timestamp)} {/* Use the helper here */}
-        </span>
+    <div className={`w-full ${isUser ? "bg-black" : "bg-zinc-950/50"}`}>
+      <div className="max-w-3xl mx-auto px-6 py-6">
+        <div className="space-y-3">
+          {/* Label - Minimal */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+              {isUser ? "You" : "Answer"}
+            </span>
+            {message.response_time && (
+              <span className="text-xs text-zinc-600">
+                • {message.response_time.toFixed(1)}s
+              </span>
+            )}
+          </div>
+
+          {/* Message Content - Clean */}
+          <div className="prose prose-invert max-w-none">
+            <p className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
+              {message.content}
+            </p>
+          </div>
+
+          {/* Timestamp - Subtle */}
+          <div className="text-xs text-zinc-600 pt-1">
+            {formatTimestamp(message.timestamp)}
+          </div>
+        </div>
       </div>
     </div>
   );

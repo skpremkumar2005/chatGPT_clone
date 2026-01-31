@@ -32,13 +32,15 @@ func SetupRoutes(e *echo.Echo) {
 		{
 			chats.POST("", controllers.CreateChat)
 			chats.GET("", controllers.GetChats)
-			chats.GET("/:chat_id", controllers.GetChatByID)       // Assuming you need this
-			chats.PUT("/:chat_id", controllers.UpdateChat)       // For renaming, etc.
+			chats.GET("/:chat_id", controllers.GetChatByID)   // Assuming you need this
+			chats.PUT("/:chat_id", controllers.UpdateChat)    // For renaming, etc.
 			chats.DELETE("/:chat_id", controllers.DeleteChat) // For archiving/deleting
-            chats.POST("/:chat_id/cleanup", controllers.CleanupChat)
+			chats.POST("/:chat_id/cleanup", controllers.CleanupChat)
 			// Message routes (nested under chats)
 			chats.POST("/:chat_id/messages", controllers.CreateMessage)
 			chats.GET("/:chat_id/messages", controllers.GetMessages)
+			// Document processing route
+			chats.POST("/:chat_id/documents", controllers.UploadAndProcessDocument)
 		}
 
 		// Direct Message routes (optional, if you want to delete a single message)

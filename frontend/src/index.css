@@ -3,6 +3,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom minimal scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #27272a #000000;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: #06b6d4;
+}
+
 .typing-indicator {
   display: flex;
   align-items: center;

@@ -28,7 +28,6 @@ type UpdateChatInput struct {
 	Title string `json:"title" validate:"required"`
 }
 
-
 // --- Controller Functions ---
 
 // CreateChat creates a new chat session.
@@ -68,6 +67,8 @@ func GetChats(c echo.Context) error {
 // CreateMessage sends a message, gets a response from Gemini, and saves both.
 // It also handles setting the chat title from the first message.
 func CreateMessage(c echo.Context) error {
+	startTime := time.Now() // Track response time
+
 	chatID, err := primitive.ObjectIDFromHex(c.Param("chat_id"))
 	if err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid chat ID")
@@ -80,6 +81,13 @@ func CreateMessage(c echo.Context) error {
 	if err := c.Validate(&input); err != nil {
 		return utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
 	}
+
+	// Filter profanity from user input
+	filteredContent, hasProfanity := services.FilterProfanity(input.Content)
+	if hasProfanity {
+		c.Logger().Warn("Profanity detected and filtered in message")
+	}
+	input.Content = filteredContent
 
 	// Check if this is the first message to set the chat title.
 	messageCount, err := services.CountMessagesInChat(chatID)
@@ -142,14 +150,21 @@ func CreateMessage(c echo.Context) error {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get response from AI")
 	}
 
+	// Calculate response time
+	responseTime := time.Since(startTime).Seconds()
+	if responseTime > 5.0 {
+		c.Logger().Warnf("Response time exceeded 5 seconds: %.2fs", responseTime)
+	}
+
 	// 5. Save the AI's response
 	aiMessage := &models.Message{
-		ID:        primitive.NewObjectID(),
-		ChatID:    chatID,
-		Role:      "assistant",
-		Content:   aiResponseContent,
-		Timestamp: primitive.NewDateTimeFromTime(time.Now()),
-		ModelUsed: "gemini-pro",
+		ID:           primitive.NewObjectID(),
+		ChatID:       chatID,
+		Role:         "assistant",
+		Content:      aiResponseContent,
+		Timestamp:    primitive.NewDateTimeFromTime(time.Now()),
+		ModelUsed:    "gemini-1.5-flash",
+		ResponseTime: responseTime,
 	}
 	savedAIMessage, err := services.SaveMessage(aiMessage)
 	if err != nil {

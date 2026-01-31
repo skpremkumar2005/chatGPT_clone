@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { loadUser } from './redux/slices/authSlice';
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { loadUser } from "./redux/slices/authSlice";
 
 // --- CHECK THESE IMPORTS CAREFULLY ---
 // These should all be default imports (no curly braces)
-import Layout from './components/Layout/Layout';
-import ChatContainer from './components/Chat/ChatContainer';
-import Login from './components/Auth/Login';
-import Register from './components/Auth/Register'; // Likely source of the issue
-import ProtectedRoute from './components/Auth/ProtectedRoute';
+import Layout from "./components/Layout/Layout";
+import ChatContainer from "./components/Chat/ChatContainer";
+import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register"; // Likely source of the issue
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
 
 function App() {
   const dispatch = useDispatch();

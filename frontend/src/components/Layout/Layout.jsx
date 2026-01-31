@@ -1,35 +1,15 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { toggleSidebar } from '../../redux/slices/uiSlice';
-import { Outlet } from 'react-router-dom';
-import Sidebar from '../Sidebar/Sidebar';
-import Header from './Header';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Sidebar from "../Sidebar/Sidebar";
 
 const Layout = () => {
-  const { sidebarOpen } = useSelector((state) => state.ui);
-  const dispatch = useDispatch();
-
   return (
-    // Add `relative` to the parent container for proper z-index context
-    <div className="relative h-screen flex bg-gray-900 text-white overflow-hidden">
-      {/* --- The Sidebar is now always in the DOM --- */}
-      {/* Its own CSS classes will hide/show it */}
+    <div className="relative h-screen flex bg-black text-white overflow-hidden">
+      {/* Sidebar - Always visible vertical sidebar */}
       <Sidebar />
 
-      {/* --- ADD THIS CLICKABLE OVERLAY --- */}
-      {/* It only appears on mobile when the sidebar is open */}
-      {sidebarOpen && (
-        <div
-          onClick={() => dispatch(toggleSidebar())}
-          className="fixed inset-0 bg-black/60 z-20 md:hidden"
-          aria-hidden="true"
-        ></div>
-      )}
-      {/* --- END OF OVERLAY --- */}
-
-
-      <div className="flex-1 flex flex-col">
-        <Header />
+      {/* Main Content - No header */}
+      <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>

@@ -3,7 +3,7 @@ import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate,
+ 
 } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loadUser } from "./redux/slices/authSlice";

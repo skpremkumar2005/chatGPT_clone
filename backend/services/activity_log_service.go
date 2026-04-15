@@ -185,123 +185,143 @@ func GetCompanyActivityStats(companyID primitive.ObjectID, days int) (map[string
 	ctx := context.Background()
 
 	startDate := time.Now().AddDate(0, 0, -days)
-
-	// Total activities
-	totalActivities, err := activityLogCollection.CountDocuments(ctx, bson.M{
+	baseFilter := bson.M{
 		"company_id": companyID,
-		"timestamp": bson.M{
-			"$gte": primitive.NewDateTimeFromTime(startDate),
-		},
-	})
+		"timestamp":  bson.M{"$gte": primitive.NewDateTimeFromTime(startDate)},
+	}
+
+	// Total actions
+	totalActions, err := activityLogCollection.CountDocuments(ctx, baseFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	// Activities by day
+	// Successful actions
+	successFilter := bson.M{
+		"company_id": companyID,
+		"timestamp":  bson.M{"$gte": primitive.NewDateTimeFromTime(startDate)},
+		"success":    true,
+	}
+	successfulActions, _ := activityLogCollection.CountDocuments(ctx, successFilter)
+
+	// Failed actions
+	failFilter := bson.M{
+		"company_id": companyID,
+		"timestamp":  bson.M{"$gte": primitive.NewDateTimeFromTime(startDate)},
+		"success":    false,
+	}
+	failedActions, _ := activityLogCollection.CountDocuments(ctx, failFilter)
+
+	// Unique active users
+	uniqueUsersPipeline := []bson.M{
+		{"$match": baseFilter},
+		{"$group": bson.M{"_id": "$user_id"}},
+		{"$count": "unique_users"},
+	}
+	uniqueCursor, err := activityLogCollection.Aggregate(ctx, uniqueUsersPipeline)
+	var uniqueUsers int64
+	if err == nil {
+		defer uniqueCursor.Close(ctx)
+		if uniqueCursor.Next(ctx) {
+			var res struct {
+				Count int64 `bson:"unique_users"`
+			}
+			if err := uniqueCursor.Decode(&res); err == nil {
+				uniqueUsers = res.Count
+			}
+		}
+	}
+
+	// Actions by type
+	actionTypePipeline := []bson.M{
+		{"$match": baseFilter},
+		{"$group": bson.M{"_id": "$action", "count": bson.M{"$sum": 1}}},
+		{"$sort": bson.M{"count": -1}},
+	}
+	typeCursor, err := activityLogCollection.Aggregate(ctx, actionTypePipeline)
+	actionsByType := map[string]int{}
+	if err == nil {
+		defer typeCursor.Close(ctx)
+		for typeCursor.Next(ctx) {
+			var res struct {
+				Action string `bson:"_id"`
+				Count  int    `bson:"count"`
+			}
+			if err := typeCursor.Decode(&res); err == nil && res.Action != "" {
+				actionsByType[res.Action] = res.Count
+			}
+		}
+	}
+
+	// Daily activities
 	dailyPipeline := []bson.M{
-		{
-			"$match": bson.M{
-				"company_id": companyID,
-				"timestamp": bson.M{
-					"$gte": primitive.NewDateTimeFromTime(startDate),
-				},
-			},
-		},
+		{"$match": baseFilter},
 		{
 			"$group": bson.M{
 				"_id": bson.M{
-					"$dateToString": bson.M{
-						"format": "%Y-%m-%d",
-						"date":   "$timestamp",
-					},
+					"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$timestamp"},
 				},
 				"count": bson.M{"$sum": 1},
 			},
 		},
-		{
-			"$sort": bson.M{"_id": 1},
-		},
+		{"$sort": bson.M{"_id": 1}},
 	}
-
-	cursor, err := activityLogCollection.Aggregate(ctx, dailyPipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
+	dailyCursor, err := activityLogCollection.Aggregate(ctx, dailyPipeline)
 	dailyActivities := []map[string]interface{}{}
-	for cursor.Next(ctx) {
-		var result struct {
-			Date  string `bson:"_id"`
-			Count int    `bson:"count"`
+	if err == nil {
+		defer dailyCursor.Close(ctx)
+		for dailyCursor.Next(ctx) {
+			var res struct {
+				Date  string `bson:"_id"`
+				Count int    `bson:"count"`
+			}
+			if err := dailyCursor.Decode(&res); err == nil {
+				dailyActivities = append(dailyActivities, map[string]interface{}{
+					"date":  res.Date,
+					"count": res.Count,
+				})
+			}
 		}
-		if err := cursor.Decode(&result); err != nil {
-			continue
-		}
-		dailyActivities = append(dailyActivities, map[string]interface{}{
-			"date":  result.Date,
-			"count": result.Count,
-		})
 	}
 
 	// Most active users
 	userPipeline := []bson.M{
-		{
-			"$match": bson.M{
-				"company_id": companyID,
-				"timestamp": bson.M{
-					"$gte": primitive.NewDateTimeFromTime(startDate),
-				},
-			},
-		},
-		{
-			"$group": bson.M{
-				"_id":   "$user_id",
-				"count": bson.M{"$sum": 1},
-			},
-		},
-		{
-			"$sort": bson.M{"count": -1},
-		},
-		{
-			"$limit": 10,
-		},
+		{"$match": baseFilter},
+		{"$group": bson.M{"_id": "$user_id", "count": bson.M{"$sum": 1}}},
+		{"$sort": bson.M{"count": -1}},
+		{"$limit": 10},
 	}
-
-	cursor, err = activityLogCollection.Aggregate(ctx, userPipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
+	userCursor, err := activityLogCollection.Aggregate(ctx, userPipeline)
 	mostActiveUsers := []map[string]interface{}{}
-	for cursor.Next(ctx) {
-		var result struct {
-			UserID primitive.ObjectID `bson:"_id"`
-			Count  int                `bson:"count"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			continue
-		}
-
-		// Get user details
-		user, err := GetUserByID(result.UserID)
-		if err == nil {
-			mostActiveUsers = append(mostActiveUsers, map[string]interface{}{
-				"user_id": result.UserID.Hex(),
-				"name":    user.Name,
-				"email":   user.Email,
-				"count":   result.Count,
-			})
+	if err == nil {
+		defer userCursor.Close(ctx)
+		for userCursor.Next(ctx) {
+			var res struct {
+				UserID primitive.ObjectID `bson:"_id"`
+				Count  int                `bson:"count"`
+			}
+			if err := userCursor.Decode(&res); err == nil {
+				user, err := GetUserByID(res.UserID)
+				if err == nil {
+					mostActiveUsers = append(mostActiveUsers, map[string]interface{}{
+						"user_id": res.UserID.Hex(),
+						"name":    user.Name,
+						"email":   user.Email,
+						"count":   res.Count,
+					})
+				}
+			}
 		}
 	}
 
-	stats := map[string]interface{}{
-		"total_activities":  totalActivities,
+	return map[string]interface{}{
+		"total_actions":     totalActions,
+		"successful_actions": successfulActions,
+		"failed_actions":    failedActions,
+		"unique_users":      uniqueUsers,
+		"actions_by_type":   actionsByType,
 		"daily_activities":  dailyActivities,
 		"most_active_users": mostActiveUsers,
 		"period_days":       days,
-	}
-
-	return stats, nil
+	}, nil
 }

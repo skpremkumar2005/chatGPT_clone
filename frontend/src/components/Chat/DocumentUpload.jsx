@@ -4,7 +4,6 @@ import axios from "axios";
 
 const DocumentUpload = ({ chatId, onDocumentProcessed, onCancel }) => {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [action, setAction] = useState("summarize");
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
@@ -40,7 +39,6 @@ const DocumentUpload = ({ chatId, onDocumentProcessed, onCancel }) => {
     setIsUploading(true);
     const formData = new FormData();
     formData.append("document", selectedFile);
-    formData.append("action", action);
 
     try {
       const response = await axios.post(
@@ -146,21 +144,6 @@ const DocumentUpload = ({ chatId, onDocumentProcessed, onCancel }) => {
                 >
                   <XMarkIcon className="h-4 w-4 text-zinc-500 hover:text-white" />
                 </button>
-              </div>
-
-              <div className="space-y-2 text-left">
-                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                  Action
-                </label>
-                <select
-                  value={action}
-                  onChange={(e) => setAction(e.target.value)}
-                  className="w-full bg-zinc-950 text-white text-sm border border-zinc-800 rounded-lg px-3 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none"
-                  disabled={isUploading}
-                >
-                  <option value="summarize">Summarize</option>
-                  <option value="extract">Extract Keywords</option>
-                </select>
               </div>
 
               <div className="flex gap-2">

@@ -1,64 +1,31 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom minimal scrollbar styling */
-* {
+/* ─── Scrollbar — dark mode ─────────────────────────────────────────────── */
+.dark * {
   scrollbar-width: thin;
-  scrollbar-color: #27272a #000000;
+  scrollbar-color: #3f3f46 #09090b;
 }
+.dark *::-webkit-scrollbar { width: 6px; height: 6px; }
+.dark *::-webkit-scrollbar-track { background: #09090b; }
+.dark *::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #52525b; }
+.dark *::-webkit-scrollbar-thumb:active { background: #06b6d4; }
 
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ─── Scrollbar — light mode ─────────────────────────────────────────────── */
+:not(.dark) * {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 #f4f4f5;
 }
+:not(.dark) *::-webkit-scrollbar { width: 6px; height: 6px; }
+:not(.dark) *::-webkit-scrollbar-track { background: #f4f4f5; }
+:not(.dark) *::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+:not(.dark) *::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+:not(.dark) *::-webkit-scrollbar-thumb:active { background: #0891b2; }
 
-*::-webkit-scrollbar-track {
-  background: #000000;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: #27272a;
-  border-radius: 3px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-*::-webkit-scrollbar-thumb:active {
-  background: #06b6d4;
-}
-
-.typing-indicator {
-  display: flex;
-  align-items: center;
-}
-
-.typing-dot {
-  height: 8px;
-  width: 8px;
-  background-color: #9ca3af; /* gray-400 */
-  border-radius: 50%;
-  display: inline-block;
-  margin: 0 4px;
-  animation: wave 1.3s infinite;
-}
-
-.typing-dot:nth-of-type(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-dot:nth-of-type(3) {
-  animation-delay: 0.4s;
-}
-
+/* ─── Typing indicator ──────────────────────────────────────────────────── */
 @keyframes wave {
-  0%, 60%, 100% {
-    transform: initial;
-  }
-  30% {
-    transform: translateY(-10px);
-  }
+  0%, 60%, 100% { transform: initial; }
+  30% { transform: translateY(-8px); }
 }

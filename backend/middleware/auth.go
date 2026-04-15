@@ -15,12 +15,16 @@ type contextKey string
 
 // Context keys for storing user information
 const (
-	UserIDKey       contextKey = "userID"
-	CompanyIDKey    contextKey = "companyID"
-	RoleIDKey       contextKey = "roleID"
-	RoleNameKey     contextKey = "roleName"
-	PermissionsKey  contextKey = "permissions"
-	IsSuperAdminKey contextKey = "isSuperAdmin"
+	UserIDKey        contextKey = "userID"
+	UserIDStrKey     contextKey = "userIDStr"
+	UserEmailKey     contextKey = "userEmail"
+	CompanyIDKey     contextKey = "companyID"
+	CompanyIDStrKey  contextKey = "companyIDStr"
+	CompanyDomainKey contextKey = "companyDomain"
+	RoleIDKey        contextKey = "roleID"
+	RoleNameKey      contextKey = "roleName"
+	PermissionsKey   contextKey = "permissions"
+	IsSuperAdminKey  contextKey = "isSuperAdmin"
 )
 
 // AuthMiddleware is the JWT authentication middleware that reads from a cookie.
@@ -63,13 +67,21 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 			// Start with user ID in context
 			ctx := context.WithValue(c.Request().Context(), UserIDKey, userID)
+			ctx = context.WithValue(ctx, UserIDStrKey, userIDStr)
+			if userEmail, ok := claims["user_email"].(string); ok && userEmail != "" {
+				ctx = context.WithValue(ctx, UserEmailKey, userEmail)
+			}
 
 			// Extract company ID (for multi-tenant)
 			if companyIDStr, ok := claims["company_id"].(string); ok && companyIDStr != "" {
 				companyID, err := primitive.ObjectIDFromHex(companyIDStr)
 				if err == nil {
 					ctx = context.WithValue(ctx, CompanyIDKey, companyID)
+					ctx = context.WithValue(ctx, CompanyIDStrKey, companyIDStr)
 				}
+			}
+			if companyDomain, ok := claims["company_domain"].(string); ok && companyDomain != "" {
+				ctx = context.WithValue(ctx, CompanyDomainKey, companyDomain)
 			}
 
 			// Extract role information

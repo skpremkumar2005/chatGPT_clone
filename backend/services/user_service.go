@@ -247,21 +247,13 @@ func GetUserStats(companyID primitive.ObjectID) (map[string]interface{}, error) 
 		return nil, err
 	}
 
-	activeUsers, err := userCollection.CountDocuments(ctx, bson.M{
-		"company_id": companyID,
-		"is_active":  true,
-	})
-	if err != nil {
-		return nil, err
-	}
+	activeUsers, _ := userCollection.CountDocuments(ctx, bson.M{"company_id": companyID, "is_active": true})
+	inactiveUsers, _ := userCollection.CountDocuments(ctx, bson.M{"company_id": companyID, "is_active": false})
 
 	// Count users by role
 	pipeline := []bson.M{
 		{"$match": bson.M{"company_id": companyID}},
-		{"$group": bson.M{
-			"_id":   "$role_name",
-			"count": bson.M{"$sum": 1},
-		}},
+		{"$group": bson.M{"_id": "$role_name", "count": bson.M{"$sum": 1}}},
 	}
 
 	cursor, err := userCollection.Aggregate(ctx, pipeline)
@@ -270,24 +262,32 @@ func GetUserStats(companyID primitive.ObjectID) (map[string]interface{}, error) 
 	}
 	defer cursor.Close(ctx)
 
-	roleDistribution := make(map[string]int)
+	rolesDistribution := make(map[string]int)
+	adminUsers := int64(0)
+	managerUsers := int64(0)
 	for cursor.Next(ctx) {
 		var result struct {
 			RoleName string `bson:"_id"`
 			Count    int    `bson:"count"`
 		}
-		if err := cursor.Decode(&result); err != nil {
+		if err := cursor.Decode(&result); err != nil || result.RoleName == "" {
 			continue
 		}
-		roleDistribution[result.RoleName] = result.Count
+		rolesDistribution[result.RoleName] = result.Count
+		if result.RoleName == "company_admin" || result.RoleName == "super_admin" {
+			adminUsers += int64(result.Count)
+		}
+		if result.RoleName == "manager" {
+			managerUsers += int64(result.Count)
+		}
 	}
 
-	stats := map[string]interface{}{
-		"total_users":       totalUsers,
-		"active_users":      activeUsers,
-		"inactive_users":    totalUsers - activeUsers,
-		"role_distribution": roleDistribution,
-	}
-
-	return stats, nil
+	return map[string]interface{}{
+		"total_users":        totalUsers,
+		"active_users":       activeUsers,
+		"inactive_users":     inactiveUsers,
+		"admin_users":        adminUsers,
+		"manager_users":      managerUsers,
+		"roles_distribution": rolesDistribution,
+	}, nil
 }

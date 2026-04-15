@@ -5,11 +5,9 @@ import (
 	"chatgpt-clone/backend/models"
 	"chatgpt-clone/backend/services"
 	"chatgpt-clone/backend/utils"
-	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/google/generative-ai-go/genai"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -127,31 +125,14 @@ func CreateMessage(c echo.Context) error {
 		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to save user message")
 	}
 
-	// 2. Get chat history for Gemini context
-	history, err := services.GetChatMessages(chatID)
+	// 2. Call Python Enterprise Assistant backend (RAG query)
+	queryResult, err := services.QueryEnterpriseAssistant(companyID.Hex(), input.Content, 3)
 	if err != nil {
-		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve chat history")
+		c.Logger().Error("Enterprise Assistant query failed:", err)
+		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get response from enterprise assistant")
 	}
 
-	// 3. Format history for the Gemini API
-	geminiHistory := []*genai.Content{}
-	for _, msg := range history {
-		role := "user"
-		if msg.Role == "assistant" {
-			role = "model"
-		}
-		geminiHistory = append(geminiHistory, &genai.Content{
-			Parts: []genai.Part{genai.Text(msg.Content)},
-			Role:  role,
-		})
-	}
-
-	// 4. Call Gemini API
-	aiResponseContent, err := services.GenerateResponse(geminiHistory, input.Content)
-	if err != nil {
-		fmt.Println("Gemini API Error:", err)
-		return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get response from AI")
-	}
+	aiResponseContent := queryResult.Answer
 
 	// Calculate response time
 	responseTime := time.Since(startTime).Seconds()
@@ -166,7 +147,7 @@ func CreateMessage(c echo.Context) error {
 		Role:         "assistant",
 		Content:      aiResponseContent,
 		Timestamp:    primitive.NewDateTimeFromTime(time.Now()),
-		ModelUsed:    "gemini-1.5-flash",
+		ModelUsed:    "enterprise-assistant-rag",
 		ResponseTime: responseTime,
 	}
 	savedAIMessage, err := services.SaveMessage(aiMessage)
@@ -299,7 +280,18 @@ func CleanupChat(c echo.Context) error {
 	return utils.SuccessResponse(c, "Chat cleanup processed successfully", nil)
 }
 
-// DeleteMessage is a placeholder for future implementation.
+// DeleteMessage deletes a specific message by its ID.
 func DeleteMessage(c echo.Context) error {
-	return utils.SuccessResponse(c, "Endpoint not yet implemented", nil)
+	companyID := c.Request().Context().Value(middleware.CompanyIDKey).(primitive.ObjectID)
+
+	messageID, err := primitive.ObjectIDFromHex(c.Param("message_id"))
+	if err != nil {
+		return utils.ErrorResponse(c, http.StatusBadRequest, "Invalid message ID")
+	}
+
+	if err := services.DeleteMessageByID(messageID, companyID); err != nil {
+		return utils.ErrorResponse(c, http.StatusNotFound, "Message not found or access denied")
+	}
+
+	return utils.SuccessResponse(c, "Message deleted successfully", nil)
 }

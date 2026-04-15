@@ -117,7 +117,9 @@ func MultiTenantLoginUser(input LoginUserInput, ipAddress string) (string, *mode
 	// Generate JWT with company and role information
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":        user.ID.Hex(),
+		"user_email":     user.Email,
 		"company_id":     user.CompanyID.Hex(),
+		"company_domain": company.Domain,
 		"email":          user.Email,
 		"role_id":        user.RoleID.Hex(),
 		"role_name":      user.RoleName,
@@ -188,4 +190,63 @@ func GetUserByID(userID primitive.ObjectID) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdateProfileInput defines what fields a user can update on their own profile.
+type UpdateProfileInput struct {
+	Name       string `json:"name" validate:"required,min=2"`
+	Phone      string `json:"phone"`
+	Department string `json:"department"`
+	Position   string `json:"position"`
+}
+
+// ChangePasswordInput defines the input for a self-service password change.
+type ChangePasswordInput struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=6"`
+}
+
+// UpdateUserProfile updates the mutable profile fields for the authenticated user.
+func UpdateUserProfile(userID primitive.ObjectID, input UpdateProfileInput) (*models.User, error) {
+	ctx := context.Background()
+	_, err := userCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{
+		"$set": bson.M{
+			"name":       input.Name,
+			"phone":      input.Phone,
+			"department": input.Department,
+			"position":   input.Position,
+			"updated_at": primitive.NewDateTimeFromTime(time.Now()),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return GetUserByID(userID)
+}
+
+// ChangeUserPassword verifies the current password and sets a new one.
+func ChangeUserPassword(userID primitive.ObjectID, input ChangePasswordInput) error {
+	ctx := context.Background()
+
+	var user models.User
+	if err := userCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user); err != nil {
+		return errors.New("user not found")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.CurrentPassword)); err != nil {
+		return errors.New("current password is incorrect")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{
+		"$set": bson.M{
+			"password":   string(hashed),
+			"updated_at": primitive.NewDateTimeFromTime(time.Now()),
+		},
+	})
+	return err
 }

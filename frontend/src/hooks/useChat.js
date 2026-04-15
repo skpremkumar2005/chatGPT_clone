@@ -97,6 +97,18 @@ export const useChat = () => {
     }
   };
 
+  // Create a chat and immediately send a first message (used by welcome screen prompts)
+  const sendMessageToNewChat = async (content) => {
+    const resultAction = await dispatch(createChatAction({ title: content.slice(0, 60) }));
+    if (createChatAction.fulfilled.match(resultAction)) {
+      const newChatId = resultAction.payload.id;
+      navigate(`/chat/${newChatId}`);
+      dispatch(sendMessageAction({ chatId: newChatId, content }));
+      return newChatId;
+    }
+    return null;
+  };
+
   // Expose state and functions to the component
   return {
     currentChat,
@@ -107,5 +119,6 @@ export const useChat = () => {
     activeChatId: chatId,
     sendMessage,
     createNewChat,
+    sendMessageToNewChat,
   };
 };

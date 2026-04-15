@@ -151,6 +151,30 @@ func CleanupEmptyChat(chatID primitive.ObjectID) error {
 	return nil
 }
 
+// DeleteMessageByID deletes a single message by its ID after verifying it belongs to the given company.
+// It looks up the parent chat to enforce company-level ownership.
+func DeleteMessageByID(messageID primitive.ObjectID, companyID primitive.ObjectID) error {
+	// Find the message first
+	var msg models.Message
+	err := messageCollection.FindOne(context.Background(), bson.M{"_id": messageID}).Decode(&msg)
+	if err != nil {
+		return err
+	}
+
+	// Verify the parent chat belongs to the requesting company
+	var chat models.Chat
+	err = chatCollection.FindOne(context.Background(), bson.M{
+		"_id":        msg.ChatID,
+		"company_id": companyID,
+	}).Decode(&chat)
+	if err != nil {
+		return err
+	}
+
+	_, err = messageCollection.DeleteOne(context.Background(), bson.M{"_id": messageID})
+	return err
+}
+
 // DeleteChat permanently deletes a chat and all its messages from the database
 func DeleteChat(chatID, companyID primitive.ObjectID) error {
 	// Delete all messages first

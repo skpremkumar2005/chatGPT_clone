@@ -19,6 +19,10 @@ const AdminDefaultRoute = () => {
     return <Navigate to="/admin/logs" replace />;
   }
 
+  if (permissions?.includes("upload:documents")) {
+    return <Navigate to="/admin/knowledge-base" replace />;
+  }
+
   // Fallback to analytics
   return <Navigate to="/admin/analytics" replace />;
 };

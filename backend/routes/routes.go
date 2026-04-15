@@ -33,7 +33,20 @@ func SetupRoutes(e *echo.Echo) {
 	{
 		// User routes
 		authRequired.GET("/auth/me", controllers.GetCurrentUser)
+		authRequired.PUT("/auth/me", controllers.UpdateUserProfile)
+		authRequired.POST("/auth/change-password", controllers.ChangePassword)
 		authRequired.POST("/auth/logout", controllers.Logout)
+
+		// Knowledge Base routes (separate module, not tied to chat)
+		knowledgeBase := authRequired.Group("/knowledge-base")
+		{
+			// List & view — any user with upload:documents permission
+			knowledgeBase.GET("/documents", controllers.GetKnowledgeBaseDocuments, middleware.RequirePermission(models.PermissionUploadDocuments))
+			knowledgeBase.GET("/documents/:doc_id", controllers.GetKnowledgeBaseDocumentContent, middleware.RequirePermission(models.PermissionUploadDocuments))
+			// Upload & delete — company admin only
+			knowledgeBase.POST("/documents", controllers.UploadKnowledgeBaseDocument, middleware.RequireCompanyAdmin())
+			knowledgeBase.DELETE("/documents/:doc_id", controllers.DeleteKnowledgeBaseDocument, middleware.RequireCompanyAdmin())
+		}
 
 		// Chat Management routes
 		chats := authRequired.Group("/chats")
@@ -44,11 +57,11 @@ func SetupRoutes(e *echo.Echo) {
 			chats.PUT("/:chat_id", controllers.UpdateChat)
 			chats.DELETE("/:chat_id", controllers.DeleteChat)
 			chats.POST("/:chat_id/cleanup", controllers.CleanupChat)
+			// Document upload for a specific chat
+			chats.POST("/:chat_id/documents", controllers.UploadAndProcessDocument)
 			// Message routes (nested under chats)
 			chats.POST("/:chat_id/messages", controllers.CreateMessage)
 			chats.GET("/:chat_id/messages", controllers.GetMessages)
-			// Document processing route
-			chats.POST("/:chat_id/documents", controllers.UploadAndProcessDocument)
 		}
 
 		// Direct Message routes

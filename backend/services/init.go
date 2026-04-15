@@ -13,12 +13,13 @@ import (
 // Package-level variables to hold collection instances.
 // They are declared but not initialized here.
 var (
-	userCollection        *mongo.Collection
-	chatCollection        *mongo.Collection
-	messageCollection     *mongo.Collection
-	companyCollection     *mongo.Collection
-	roleCollection        *mongo.Collection
-	activityLogCollection *mongo.Collection
+	userCollection          *mongo.Collection
+	chatCollection          *mongo.Collection
+	messageCollection       *mongo.Collection
+	companyCollection       *mongo.Collection
+	roleCollection          *mongo.Collection
+	activityLogCollection   *mongo.Collection
+	knowledgeBaseCollection *mongo.Collection
 )
 
 // Init initializes all the service-level variables, like database collections.
@@ -30,12 +31,16 @@ func Init() {
 	companyCollection = config.GetCollection("companies")
 	roleCollection = config.GetCollection("roles")
 	activityLogCollection = config.GetCollection("activity_logs")
+	knowledgeBaseCollection = config.GetCollection("knowledge_base_documents")
 
 	// Create database indexes for performance and constraints
 	createIndexes()
 
 	// Initialize the Gemini client as well
 	InitGemini()
+
+	// Initialize Enterprise Assistant Python backend client
+	InitEnterpriseAssistantClient()
 }
 
 // createIndexes creates necessary database indexes
@@ -122,6 +127,20 @@ func createIndexes() {
 	_, err = activityLogCollection.Indexes().CreateMany(ctx, activityLogIndexes)
 	if err != nil {
 		log.Printf("Warning: Failed to create activity log indexes: %v", err)
+	}
+
+	// Knowledge base documents collection indexes
+	knowledgeBaseIndexes := []mongo.IndexModel{
+		{
+			Keys: bson.D{{Key: "company_id", Value: 1}, {Key: "created_at", Value: -1}},
+		},
+		{
+			Keys: bson.D{{Key: "status", Value: 1}},
+		},
+	}
+	_, err = knowledgeBaseCollection.Indexes().CreateMany(ctx, knowledgeBaseIndexes)
+	if err != nil {
+		log.Printf("Warning: Failed to create knowledge base indexes: %v", err)
 	}
 
 	log.Println("Database indexes created successfully")

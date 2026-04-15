@@ -37,13 +37,15 @@ Remember: You are here to enhance organizational efficiency and employee satisfa
 func InitGemini() {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY environment variable not set.")
+		log.Println("⚠️ GEMINI_API_KEY not set. Gemini service disabled; using Enterprise Assistant backend.")
+		return
 	}
 
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
-		log.Fatalf("Failed to create Gemini client: %v", err)
+		log.Printf("⚠️ Failed to create Gemini client: %v. Gemini service disabled.", err)
+		return
 	}
 
 	geminiClient = client
@@ -108,38 +110,10 @@ func GenerateResponse(history []*genai.Content, newUserMessage string) (string, 
 	return "", errors.New("no text part found in Gemini API response")
 }
 
-// ProcessDocument analyzes a document using Gemini's multimodal capabilities
+// ProcessDocument extracts text from uploaded documents using local parsers/tools.
 func ProcessDocument(documentData []byte, mimeType string, prompt string) (string, error) {
-	if geminiClient == nil {
-		return "", errors.New("Gemini client not initialized")
-	}
-
-	ctx := context.Background()
-	model := geminiClient.GenerativeModel("gemini-2.5-flash")
-
-	// Create the prompt parts
-	parts := []genai.Part{
-		genai.Text(prompt),
-		genai.Blob{
-			MIMEType: mimeType,
-			Data:     documentData,
-		},
-	}
-
-	resp, err := model.GenerateContent(ctx, parts...)
-	if err != nil {
-		return "", fmt.Errorf("failed to process document: %w", err)
-	}
-
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", errors.New("received empty response from document processing")
-	}
-
-	if textPart, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
-		return string(textPart), nil
-	}
-
-	return "", errors.New("no text response from document processing")
+	_ = prompt
+	return ExtractDocumentText(documentData, mimeType)
 }
 
 // FilterProfanity checks if the message contains bad language

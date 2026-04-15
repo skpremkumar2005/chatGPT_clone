@@ -142,8 +142,11 @@ const chatSlice = createSlice({
       })
       // Delete Chat
       .addCase(deleteChat.fulfilled, (state, action) => {
-        state.chatHistory = state.chatHistory.filter(chat => chat.id !== action.payload);
-        if (state.currentChat.id === action.payload) {
+        // MongoDB returns either `id` or `_id` depending on serialisation — filter both
+        state.chatHistory = state.chatHistory.filter(
+          chat => chat.id !== action.payload && chat._id !== action.payload
+        );
+        if (state.currentChat.id === action.payload || state.currentChat._id === action.payload) {
           state.currentChat = { id: null, title: '', messages: [] };
         }
       })

@@ -32,9 +32,9 @@ const ChatHistory = ({ history, loading }) => {
     }
   };
 
-  const handleDeleteChat = async (chatId) => {
+  const handleDeleteChat = async (id) => {
     if (window.confirm("Are you sure you want to delete this chat?")) {
-      await dispatch(deleteChat(chatId));
+      await dispatch(deleteChat(id));
     }
   };
 
